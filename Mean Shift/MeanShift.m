@@ -11,7 +11,7 @@ slika = slika';
 
 %inicijalizacija%
 meanShiftFolder = cd('..\Mean Shift');
-radijus = 0.07; %radijus
+radijus = 0.05; %radijus
 radijus_sqr = radijus^2; 
 eps = 1e-3*radijus;  %prag tolerancije
 broj_klastera = 0;
@@ -77,13 +77,12 @@ for i = 1:broj_klastera
     klaster_data_cell{i} = find(najveci_klaster_indeksi == i);
 end
 
-slika = slika';
-for i = 1:length(klaster_data_cell)                                              % Replace Image Colors With Cluster Centers
-slika(klaster_data_cell{i},:) = repmat(centri_klastera(:,i)',size(klaster_data_cell{i},2),1); 
+slika_tmp = slika';
+for i = 1:length(klaster_data_cell)                                              
+slika_tmp(klaster_data_cell{i},:) = repmat(centri_klastera(:,i)',size(klaster_data_cell{i},2),1); 
 end
-length(klaster_data_cell)
-segmentirana_slika = reshape(slika,size(I,1),size(I,2),3);                                         % Segmented Image
-Kms = length(klaster_data_cell);
+segmentirana_slika = reshape(slika_tmp,size(original,1),size(original,2),3);                                         
+
 % 
 figure()
 imshow(original); %original

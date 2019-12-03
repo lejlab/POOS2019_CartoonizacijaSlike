@@ -1,0 +1,93 @@
+workFolder = cd('..\..\POOS2019_CartoonizacijaSlike');
+
+imageFolder = cd('slike');
+%ucitavanje i priprema slike
+slika = imread('71OPYRYgeeL._SX425_.jpg');
+original = slika;
+%imshow(image) %prikaz slike prije primjene filtera
+slika = im2double(slika); %konverzija u double radi racunanja mean-a kasnije
+slika = reshape(slika, size(slika,1)*size(slika,2),3); %reorganizacija matrice
+slika = slika';
+
+%inicijalizacija%
+meanShiftFolder = cd('..\Mean Shift');
+radijus = 0.07; %radijus
+radijus_sqr = radijus^2; 
+eps = 1e-3*radijus;  %prag tolerancije
+broj_klastera = 0;
+centar_klastera = [];
+[br_dimenzija, br_pixela] = size(slika);
+posjeceni = zeros(1, br_pixela, 'uint8'); 
+glasovi = zeros(1, br_pixela, 'uint16'); %za rjesavanje situacija kada algoritam ne zna u koji klaster da smjesti pixel
+init_means = 1 : br_pixela; %potrebno kao pomoc za racunanje mean-a
+br_neposjecenih = br_pixela; %u prvoj iteraciji su svi pixeli neposjeceni
+
+%mean shift
+
+while br_neposjecenih
+    
+    trenutni_mean = slika(:, init_means(ceil(rand*(br_neposjecenih-1e-6))));  %randomizacija pocetnog mean-a
+    dodani_u_klaster = []; %pixeli koji se trebaju dodati u ovaj klaster
+    klaster_glasovi = zeros(1,br_pixela,'uint16');  %glasovi za trenutnu iteraciju
+    
+    %vrsimo racunanje srednje vrijednosti za i-ti pixel
+    %dok se centri u dvije uzastopne iteracije ne poklope
+   while true 
+       tmp = repmat(trenutni_mean, 1, br_pixela); %kopiramo matricu mean u niz formata 1xbr_pixela
+       udaljenosti_sqr = sum((tmp - slika).^2); %izracunamo kvadrat razlike za svaki pixel
+       unutar_radijusa = find(udaljenosti_sqr < radijus_sqr); %iz niza udaljenosti odaberemo one koje su unutar radijusa
+       klaster_glasovi(unutar_radijusa) = klaster_glasovi(unutar_radijusa) + 1; %dodamo po +1 glas za svaki pixel unutar radijusa
+       
+       prethodni_mean = trenutni_mean; %sacuvamo mean iz prethodne iteracije radi uslova zaustavljanja
+       trenutni_mean = mean(slika(:, unutar_radijusa),2); %racunamo mean za pixele unutar radijusa
+       dodani_u_klaster = [dodani_u_klaster unutar_radijusa]; %dodamo ih u klaster za trenutnu iteraciju
+       posjeceni(dodani_u_klaster) = 1; %oznaka da su novododani pixeli posjeceni
+       
+       %ukoliko se mean ne promijeni za vise od eps u iteraciji
+       if abs(trenutni_mean - prethodni_mean) < eps
+           %provjera mogu li se neki klasteri ujediniti u jedan
+           spoji = 0;
+           for i = 1 : broj_klastera
+               %euklidova udaljenost trenutnog mean-a i centra klastera
+               udaljenost_mean_centar = norm(trenutni_mean - centri_klastera(:,i));
+               %ako je manja od radijus/2, spajamo klastere
+               if udaljenost_mean_centar < radijus/2
+                   spoji = i;
+                   break;
+               end
+           end
+           if spoji ~= 0 %treba se vrsiti spajanje centara trenutni_mean i spoji
+               centri_klastera(:, spoji) = 0.5 * (trenutni_mean + centri_klastera(:, spoji)); %racunamo sr vrijednost novog centra i mean-a
+               glasovi(spoji, :) = glasovi(spoji, :) + klaster_glasovi;
+           else %u suprotnom, radi se o novom klasteru
+               broj_klastera = broj_klastera + 1;
+               centri_klastera(:, broj_klastera) = trenutni_mean; %mean je centar novog klastera
+               glasovi(broj_klastera, :) = klaster_glasovi;
+           end
+           break;
+       end
+   end
+   init_means = find(posjeceni == 0); %ne razmatramo pixele koji su jednom bili unutar radijusa
+   br_neposjecenih = length(init_means);
+end
+
+[najveci_klasteri, najveci_klaster_indeksi] = max(glasovi,[],1); %pixel pripada klasteru sa najvise glasova
+klaster_data_cell = cell(broj_klastera,1);
+for i = 1:broj_klastera
+    klaster_data_cell{i} = find(najveci_klaster_indeksi == i);
+end
+
+slika = slika';
+for i = 1:length(klaster_data_cell)                                              % Replace Image Colors With Cluster Centers
+slika(klaster_data_cell{i},:) = repmat(centri_klastera(:,i)',size(klaster_data_cell{i},2),1); 
+end
+length(klaster_data_cell)
+segmentirana_slika = reshape(slika,size(I,1),size(I,2),3);                                         % Segmented Image
+Kms = length(klaster_data_cell);
+% 
+figure()
+imshow(original); %original
+title('Izvorna slika'); 
+figure()
+imshow(segmentirana_slika);
+title('Segmentirana slika'); 

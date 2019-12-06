@@ -2,7 +2,7 @@ workFolder = cd('..\..\POOS2019_CartoonizacijaSlike');
 
 imageFolder = cd('slike');
 %ucitavanje i priprema slike
-slika = imread('Boy-smelling-flowers-NGW19-2.png');
+slika = imread('people-1601516_960_720.jpg');
 original = slika;
 %imshow(image) %prikaz slike prije primjene filtera
 slika = im2double(slika); %konverzija u double radi racunanja mean-a kasnije
